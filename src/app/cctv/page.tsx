@@ -4,6 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Trash2, Video, Camera, Clock, X, Settings2 } from "lucide-react";
 import dynamic from "next/dynamic";
+import Image from "next/image";
+import { AnalysisResultView } from "@/components/AnalysisResultView";
+import { CameraScheduleEditor } from "@/components/CameraScheduleEditor";
+import { NotificationSettingsPanel } from "@/components/NotificationSettingsPanel";
 
 // Mengimpor ReactPlayer secara dinamis agar aman dijalankan di Next.js (SSR = false)
 const ReactPlayer = dynamic(() => import("react-player"), { ssr: false });
@@ -128,9 +132,18 @@ export default function CCTVPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ cameraId, deviceSerial, period: "manual", task, note }), 
       });
-      const data = await res.json();
+      const data = (await res.json()) as {
+        error?: string;
+        notifications?: Array<{ channel: string; sent: boolean }>;
+      };
       if (data.error) throw new Error(data.error);
-      alert("Snapshot berhasil diambil & dianalisa AI!");
+      const sentChannels = data.notifications?.filter((item) => item.sent).map((item) => item.channel) || [];
+      const failedChannels = data.notifications?.filter((item) => !item.sent).map((item) => item.channel) || [];
+      alert(
+        sentChannels.length > 0
+          ? `Snapshot dan analisis berhasil. Notifikasi terkirim melalui ${sentChannels.join(" & ")}.${failedChannels.length > 0 ? ` Gagal: ${failedChannels.join(" & ")}.` : ""}`
+          : "Snapshot berhasil diambil dan dianalisis AI.",
+      );
       fetchData();
     } catch (error: unknown) {
       alert("Error: " + getErrorMessage(error));
@@ -198,6 +211,8 @@ export default function CCTVPage() {
             </form>
           </div>
 
+          <NotificationSettingsPanel />
+
           <div className="space-y-4">
             <h3 className="font-semibold text-slate-700">Manajemen Kamera Aktif</h3>
             {cameras.map(cam => {
@@ -236,13 +251,7 @@ export default function CCTVPage() {
                       />
                     )}
                     
-                    {/* UI Penjadwalan (Visual Layout) */}
-                    <div className="pt-2 border-t border-slate-200 mt-2">
-                      <div className="flex justify-between items-center text-xs">
-                         <span className="flex items-center gap-1 font-medium text-slate-600"><Clock size={12}/> Jadwal Otomatis:</span>
-                         <span className="text-blue-600 font-semibold cursor-pointer hover:underline">08:00 & 17:00</span>
-                      </div>
-                    </div>
+                    <CameraScheduleEditor cameraId={cam.id} task={currentTask} note={currentNote} />
                   </div>
 
                   {/* Tombol Aksi */}
@@ -308,7 +317,14 @@ export default function CCTVPage() {
               {filteredSnapshots.map(snap => (
                 <div key={snap.id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col hover:shadow-md transition-shadow">
                   <div className="relative group">
-                    <img src={snap.image_url} alt="CCTV" className="w-full h-52 object-cover bg-slate-100" />
+                    <Image
+                      src={snap.image_url}
+                      alt={`Snapshot CCTV ${snap.cameras?.name || "kamera"}`}
+                      width={640}
+                      height={360}
+                      unoptimized
+                      className="h-52 w-full bg-slate-100 object-cover"
+                    />
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-start justify-end p-3">
                       <button 
                         onClick={() => handleDeleteSnapshot(snap.id)}
@@ -328,8 +344,8 @@ export default function CCTVPage() {
                         <Clock size={12}/> {new Date(snap.created_at).toLocaleString('id-ID')}
                       </div>
                     </div>
-                    <div className="mt-1 text-sm text-slate-700 flex-1">
-                      <p className="whitespace-pre-wrap leading-relaxed text-slate-600 border-l-2 border-slate-200 pl-3">{snap.ai_journal}</p>
+                    <div className="mt-1 flex-1 border-t border-slate-100 pt-3">
+                      <AnalysisResultView value={snap.ai_journal} />
                     </div>
                   </div>
                 </div>
