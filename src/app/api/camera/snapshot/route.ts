@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 
+export const runtime = "edge";
+
 export async function POST(request: Request) {
   try {
     const { deviceSerial, cameraId, period, task, note } = await request.json();

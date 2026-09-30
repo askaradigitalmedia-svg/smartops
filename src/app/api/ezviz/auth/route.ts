@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-
+export const runtime = "edge";
 export async function POST() {
   const appKey = process.env.EZVIZ_APP_KEY;
   const appSecret = process.env.EZVIZ_APP_SECRET;
