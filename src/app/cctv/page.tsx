@@ -1,21 +1,70 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Trash2, Video, Camera, Clock, X, Settings2 } from "lucide-react";
 import dynamic from "next/dynamic";
 
 // Mengimpor ReactPlayer secara dinamis agar aman dijalankan di Next.js (SSR = false)
-const ReactPlayer = dynamic(() => import("react-player"), { ssr: false }) as any;
+const ReactPlayer = dynamic(() => import("react-player"), { ssr: false });
+
+type CameraRecord = {
+  id: string;
+  name: string;
+  device_serial: string;
+  location?: string | null;
+};
+
+type SnapshotRecord = {
+  id: string;
+  camera_id: string;
+  image_url: string;
+  created_at: string;
+  ai_journal: string;
+  cameras: { name: string } | null;
+};
+
+type LiveApiResponse = {
+  url?: string;
+  error?: string;
+  action?: string;
+  code?: string;
+};
+
+type LiveError = {
+  cameraId: string;
+  message: string;
+  action?: string;
+  code?: string;
+};
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Terjadi kesalahan yang tidak diketahui.";
+}
+
+async function loadDashboardData() {
+  const [cameraResult, snapshotResult] = await Promise.all([
+    supabase.from("cameras").select("*"),
+    supabase
+      .from("snapshots")
+      .select("*, cameras(name)")
+      .order("created_at", { ascending: false }),
+  ]);
+
+  return {
+    cameras: (cameraResult.data || []) as CameraRecord[],
+    snapshots: (snapshotResult.data || []) as SnapshotRecord[],
+  };
+}
 
 export default function CCTVPage() {
-  const [cameras, setCameras] = useState<any[]>([]);
-  const [snapshots, setSnapshots] = useState<any[]>([]);
+  const [cameras, setCameras] = useState<CameraRecord[]>([]);
+  const [snapshots, setSnapshots] = useState<SnapshotRecord[]>([]);
   const [loading, setLoading] = useState(true);
   
   // State interaksi
   const [isCapturing, setIsCapturing] = useState(false);
-  const [isLoadingLive, setIsLoadingLive] = useState(false);
+  const [loadingLiveCameraId, setLoadingLiveCameraId] = useState<string | null>(null);
   const [newCam, setNewCam] = useState({ name: "", device_serial: "", location: "Kantor" });
   
   // State untuk instruksi & jadwal dinamis
@@ -24,25 +73,35 @@ export default function CCTVPage() {
   const [filterCam, setFilterCam] = useState("all");
 
   // State untuk Pop-up Live View
-  const [liveData, setLiveData] = useState({ isOpen: false, url: "", camName: "" });
+  const [liveData, setLiveData] = useState({
+    isOpen: false,
+    url: "",
+    camName: "",
+    cameraId: "",
+  });
+  const [liveError, setLiveError] = useState<LiveError | null>(null);
 
-  useEffect(() => {
-    fetchData();
+  const fetchData = useCallback(async () => {
+    const data = await loadDashboardData();
+    setCameras(data.cameras);
+    setSnapshots(data.snapshots);
+    setLoading(false);
   }, []);
 
-  const fetchData = async () => {
-    setLoading(true);
-    const { data: camData } = await supabase.from("cameras").select("*");
-    if (camData) setCameras(camData);
+  useEffect(() => {
+    let cancelled = false;
 
-    const { data: snapData } = await supabase
-      .from("snapshots")
-      .select("*, cameras(name)")
-      .order("created_at", { ascending: false });
-    if (snapData) setSnapshots(snapData);
+    void loadDashboardData().then((data) => {
+      if (cancelled) return;
+      setCameras(data.cameras);
+      setSnapshots(data.snapshots);
+      setLoading(false);
+    });
 
-    setLoading(false);
-  };
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleAddCamera = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,31 +132,45 @@ export default function CCTVPage() {
       if (data.error) throw new Error(data.error);
       alert("Snapshot berhasil diambil & dianalisa AI!");
       fetchData();
-    } catch (error: any) {
-      alert("Error: " + error.message);
+    } catch (error: unknown) {
+      alert("Error: " + getErrorMessage(error));
     } finally {
       setIsCapturing(false);
     }
   };
 
   // Fungsi untuk memanggil API Live View
-  const handleLiveView = async (cam: any) => {
-    setIsLoadingLive(true);
+  const handleLiveView = async (cam: CameraRecord) => {
+    setLoadingLiveCameraId(cam.id);
+    setLiveError(null);
     try {
       const res = await fetch("/api/camera/live", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ deviceSerial: cam.device_serial })
       });
-      const data = await res.json();
-      if(data.error) throw new Error(data.error);
+      const data = (await res.json()) as LiveApiResponse;
+
+      if (!res.ok || data.error || !data.url) {
+        setLiveError({
+          cameraId: cam.id,
+          message: data.error || "Live View tidak dapat dimuat.",
+          action: data.action,
+          code: data.code,
+        });
+        return;
+      }
       
       // Buka Modal dan mainkan URL stream-nya
-      setLiveData({ isOpen: true, url: data.url, camName: cam.name });
-    } catch (err: any) {
-      alert("Gagal memuat Live View: " + err.message);
+      setLiveData({ isOpen: true, url: data.url, camName: cam.name, cameraId: cam.id });
+    } catch (error: unknown) {
+      setLiveError({
+        cameraId: cam.id,
+        message: "Aplikasi gagal terhubung ke server Live View.",
+        action: getErrorMessage(error),
+      });
     } finally {
-      setIsLoadingLive(false);
+      setLoadingLiveCameraId(null);
     }
   };
 
@@ -130,6 +203,7 @@ export default function CCTVPage() {
             {cameras.map(cam => {
               const currentTask = tasks[cam.id] || "hitung";
               const currentNote = notes[cam.id] || "";
+              const isLoadingLive = loadingLiveCameraId === cam.id;
 
               return (
                 <div key={cam.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
@@ -188,6 +262,22 @@ export default function CCTVPage() {
                       <Camera size={16} /> {isCapturing ? "Proses..." : "Snapshot AI"}
                     </button>
                   </div>
+
+                  {liveError?.cameraId === cam.id && (
+                    <div
+                      role="alert"
+                      className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-950"
+                    >
+                      <p className="font-semibold">Live View belum dapat dibuka</p>
+                      <p className="mt-1">{liveError.message}</p>
+                      {liveError.action && <p className="mt-1 text-amber-800">{liveError.action}</p>}
+                      {liveError.code && (
+                        <p className="mt-2 font-mono text-[11px] text-amber-700">
+                          Kode EZVIZ: {liveError.code}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -263,7 +353,7 @@ export default function CCTVPage() {
                 <span className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse"></span>
                 <h3 className="font-bold text-white tracking-wide">{liveData.camName}</h3>
               </div>
-              <button onClick={() => setLiveData({ isOpen: false, url: "", camName: "" })} className="text-slate-300 hover:text-white bg-slate-800/50 p-2 rounded-full backdrop-blur-sm transition-colors">
+              <button onClick={() => setLiveData({ isOpen: false, url: "", camName: "", cameraId: "" })} className="text-slate-300 hover:text-white bg-slate-800/50 p-2 rounded-full backdrop-blur-sm transition-colors">
                 <X size={18} />
               </button>
             </div>
@@ -271,12 +361,22 @@ export default function CCTVPage() {
             {/* Player HLS */}
             <div className="w-full aspect-video bg-black relative flex items-center justify-center">
               <ReactPlayer 
-                url={liveData.url} 
+                src={liveData.url}
                 playing={true}
                 controls={true}
-                width="100%" 
-                height="100%" 
-                config={{ file: { forceHLS: true } } as any}
+                muted={true}
+                playsInline={true}
+                width="100%"
+                height="100%"
+                style={{ width: "100%", height: "100%" }}
+                onError={() => {
+                  setLiveError({
+                    cameraId: liveData.cameraId,
+                    message: "Alamat stream diterima, tetapi browser gagal memutar video.",
+                    action: "Tutup Live View, tunggu beberapa detik, lalu coba kembali.",
+                  });
+                  setLiveData({ isOpen: false, url: "", camName: "", cameraId: "" });
+                }}
               />
             </div>
           </div>
