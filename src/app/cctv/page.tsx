@@ -6,7 +6,7 @@ import { Trash2, Video, Camera, Clock, X, Settings2 } from "lucide-react";
 import dynamic from "next/dynamic";
 
 // Mengimpor ReactPlayer secara dinamis agar aman dijalankan di Next.js (SSR = false)
-const ReactPlayer = dynamic(() => import("react-player/lazy"), { ssr: false });
+const ReactPlayer = dynamic(() => import("react-player"), { ssr: false }) as any;
 
 export default function CCTVPage() {
   const [cameras, setCameras] = useState<any[]>([]);
@@ -121,7 +121,7 @@ export default function CCTVPage() {
                 value={newCam.name} onChange={e => setNewCam({...newCam, name: e.target.value})} placeholder="Nama (Cth: Gudang)" />
               <input type="text" required className="border p-2 rounded-lg w-full text-sm outline-none focus:border-blue-500"
                 value={newCam.device_serial} onChange={e => setNewCam({...newCam, device_serial: e.target.value})} placeholder="Serial Number" />
-              <button type="submit" className="w-full bg-slate-900 text-white py-2 rounded-lg text-sm font-medium hover:bg-slate-800">Simpan Kamera</button>
+              <button type="submit" className="w-full bg-slate-900 text-white py-2 rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors">Simpan Kamera</button>
             </form>
           </div>
 
@@ -202,7 +202,7 @@ export default function CCTVPage() {
               className="border p-2 rounded-lg text-sm outline-none focus:border-blue-500 bg-white text-slate-700 font-medium"
               value={filterCam} onChange={(e) => setFilterCam(e.target.value)}
             >
-              <option value="all">👁️ Tampilkan Semua Kamera</option>
+              <option value="all">Tampilkan Semua Kamera</option>
               {cameras.map(cam => (
                 <option key={cam.id} value={cam.id}>{cam.name}</option>
               ))}
@@ -244,6 +244,11 @@ export default function CCTVPage() {
                   </div>
                 </div>
               ))}
+              {filteredSnapshots.length === 0 && (
+                <p className="text-sm text-slate-500 col-span-full bg-white p-6 text-center rounded-xl border border-dashed border-slate-300">
+                  Belum ada riwayat snapshot untuk filter ini.
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -271,7 +276,7 @@ export default function CCTVPage() {
                 controls={true}
                 width="100%" 
                 height="100%" 
-                config={{ file: { forceHLS: true } }}
+                config={{ file: { forceHLS: true } } as any}
               />
             </div>
           </div>
