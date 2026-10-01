@@ -3,6 +3,7 @@ import { runSnapshotAnalysis } from "@/lib/snapshot";
 import { supabase } from "@/lib/supabase";
 
 export const runtime = "edge";
+export const dynamic = "force-dynamic";
 
 type DueSchedule = {
   id: string;
@@ -13,7 +14,16 @@ type DueSchedule = {
   cameras: { device_serial: string; name: string } | null;
 };
 
-function jakartaNow() {
+type ScheduleResult = {
+  scheduleId: string;
+  scheduledTime: string;
+  success: boolean;
+  snapshotId?: string;
+  error?: string;
+  willRetry?: boolean;
+};
+
+function jakartaNow(date = new Date()) {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Jakarta",
     year: "numeric",
@@ -22,7 +32,7 @@ function jakartaNow() {
     hour: "2-digit",
     minute: "2-digit",
     hourCycle: "h23",
-  }).formatToParts(new Date());
+  }).formatToParts(date);
   const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
   return {
     date: `${value.year}-${value.month}-${value.day}`,
@@ -30,10 +40,28 @@ function jakartaNow() {
   };
 }
 
+function noStoreJson(body: unknown, status = 200) {
+  return NextResponse.json(body, {
+    status,
+    headers: { "Cache-Control": "no-store" },
+  });
+}
+
+export async function GET() {
+  return noStoreJson({
+    service: "smartops-snapshot-scheduler",
+    configured: Boolean(process.env.CRON_SECRET?.trim()),
+    checkedAt: jakartaNow(),
+  });
+}
+
 export async function POST(request: Request) {
-  const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret || request.headers.get("authorization") !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const cronSecret = process.env.CRON_SECRET?.trim();
+  if (!cronSecret) {
+    return noStoreJson({ error: "CRON_SECRET belum dikonfigurasi pada aplikasi." }, 503);
+  }
+  if (request.headers.get("authorization") !== `Bearer ${cronSecret}`) {
+    return noStoreJson({ error: "CRON_SECRET Worker tidak cocok dengan aplikasi." }, 401);
   }
 
   const now = jakartaNow();
@@ -41,43 +69,77 @@ export async function POST(request: Request) {
     .from("camera_schedules")
     .select("id,camera_id,snapshot_time,task,note,cameras(device_serial,name)")
     .eq("enabled", true)
-    .eq("snapshot_time", now.time)
-    .or(`last_run_date.is.null,last_run_date.neq.${now.date}`);
+    .lte("snapshot_time", now.time)
+    .or(`last_run_date.is.null,last_run_date.neq.${now.date}`)
+    .order("snapshot_time")
+    .limit(50);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return noStoreJson({ error: error.message }, 500);
 
   const schedules = (data || []) as unknown as DueSchedule[];
-  const results = [];
-  for (const schedule of schedules) {
-    if (!schedule.cameras?.device_serial) continue;
+  const results: ScheduleResult[] = [];
 
-    const { data: claimed } = await supabase
+  for (const schedule of schedules) {
+    const { data: claimed, error: claimError } = await supabase
       .from("camera_schedules")
       .update({ last_run_date: now.date })
       .eq("id", schedule.id)
       .or(`last_run_date.is.null,last_run_date.neq.${now.date}`)
       .select("id")
       .maybeSingle();
+
+    if (claimError) {
+      results.push({
+        scheduleId: schedule.id,
+        scheduledTime: schedule.snapshot_time,
+        success: false,
+        error: `Gagal mengunci jadwal: ${claimError.message}`,
+        willRetry: true,
+      });
+      continue;
+    }
     if (!claimed) continue;
 
     try {
+      if (!schedule.cameras?.device_serial) throw new Error("Kamera atau serial number tidak ditemukan.");
+
       const result = await runSnapshotAnalysis({
         cameraId: schedule.camera_id,
         deviceSerial: schedule.cameras.device_serial,
-        period: `terjadwal-${now.time.slice(0, 5)}`,
+        period: `terjadwal-${schedule.snapshot_time.slice(0, 5)}`,
         task: schedule.task,
         note: schedule.note || "",
       });
-      results.push({ scheduleId: schedule.id, success: true, snapshotId: result.snapshotId });
-    } catch (snapshotError: unknown) {
       results.push({
         scheduleId: schedule.id,
+        scheduledTime: schedule.snapshot_time,
+        success: true,
+        snapshotId: result.snapshotId,
+      });
+    } catch (snapshotError: unknown) {
+      const { error: releaseError } = await supabase
+        .from("camera_schedules")
+        .update({ last_run_date: null })
+        .eq("id", schedule.id)
+        .eq("last_run_date", now.date);
+
+      results.push({
+        scheduleId: schedule.id,
+        scheduledTime: schedule.snapshot_time,
         success: false,
         error: snapshotError instanceof Error ? snapshotError.message : "Snapshot gagal.",
+        willRetry: !releaseError,
       });
     }
   }
 
-  return NextResponse.json({ success: true, checkedAt: now, processed: results.length, results });
+  return noStoreJson({
+    success: results.every((result) => result.success),
+    checkedAt: now,
+    due: schedules.length,
+    processed: results.length,
+    succeeded: results.filter((result) => result.success).length,
+    failed: results.filter((result) => !result.success).length,
+    results,
+  });
 }
-

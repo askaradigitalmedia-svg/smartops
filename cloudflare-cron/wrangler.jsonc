@@ -1,0 +1,16 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "smartops-snapshot-scheduler",
+  "main": "worker.js",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": true,
+  "triggers": {
+    "crons": ["* * * * *"]
+  },
+  "vars": {
+    "SMARTOPS_URL": "https://smartops.pages.dev"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

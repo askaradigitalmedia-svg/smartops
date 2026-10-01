@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "cron:deploy": "wrangler deploy --config cloudflare-cron/wrangler.jsonc",
+    "cron:secret": "wrangler secret put CRON_SECRET --config cloudflare-cron/wrangler.jsonc",
+    "cron:tail": "wrangler tail --config cloudflare-cron/wrangler.jsonc"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

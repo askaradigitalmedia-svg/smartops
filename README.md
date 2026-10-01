@@ -45,6 +45,8 @@ Fitur jadwal snapshot dan notifikasi membutuhkan satu migration Supabase dan beb
 2. Salin variable yang diperlukan dari `.env.example` ke environment lokal dan Cloudflare Pages.
 3. Untuk email, buat API key Resend dan verifikasi domain pengirim. Saat pengujian dapat memakai `onboarding@resend.dev`.
 4. Untuk Telegram, buat bot melalui `@BotFather`, masukkan `TELEGRAM_BOT_TOKEN`, lalu isi Chat ID melalui dashboard.
-5. Deploy Worker pada folder `cloudflare-cron` dan pasang Cron Trigger setiap menit. Instruksi lengkap ada di `cloudflare-cron/README.md`.
+5. Login dengan `npx wrangler login`, jalankan `npm run cron:secret`, lalu `npm run cron:deploy`. Konfigurasi Worker sudah memasang Cron Trigger setiap menit. Instruksi lengkap ada di `cloudflare-cron/README.md`.
+
+Pastikan `CRON_SECRET` pada Cloudflare Pages project `smartops` dan Worker `smartops-snapshot-scheduler` berisi nilai yang persis sama. Setelah mengubah secret Pages, lakukan deploy ulang aplikasi agar nilainya tersedia pada runtime.
 
 Secret `RESEND_API_KEY`, `TELEGRAM_BOT_TOKEN`, dan `CRON_SECRET` tidak boleh memakai prefix `NEXT_PUBLIC_`.

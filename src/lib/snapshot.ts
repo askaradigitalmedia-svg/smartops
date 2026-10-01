@@ -71,31 +71,43 @@ async function analyzeImage(imageBase64: string, mimeType: string, task?: string
   const geminiKey = process.env.GEMINI_API_KEY;
   if (!geminiKey) throw new Error("GEMINI_API_KEY belum dikonfigurasi.");
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${geminiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            { text: buildPrompt(task, note) },
-            { inline_data: { mime_type: mimeType, data: imageBase64 } },
-          ],
-        }],
-        generationConfig: { responseMimeType: "application/json" },
-      }),
-      signal: AbortSignal.timeout(45_000),
-    },
-  );
-  const payload = (await response.json()) as {
-    error?: { message?: string };
-    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-  };
-  if (!response.ok || payload.error) throw new Error(payload.error?.message || "Gemini gagal memproses gambar.");
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${geminiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { text: buildPrompt(task, note) },
+                { inline_data: { mime_type: mimeType, data: imageBase64 } },
+              ],
+            }],
+            generationConfig: { responseMimeType: "application/json" },
+          }),
+          signal: AbortSignal.timeout(45_000),
+        },
+      );
+      const payload = (await response.json()) as {
+        error?: { message?: string };
+        candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+      };
+      if (!response.ok || payload.error) {
+        throw new Error(payload.error?.message || "Gemini gagal memproses gambar.");
+      }
 
-  const text = payload.candidates?.[0]?.content?.parts?.map((part) => part.text || "").join("\n") || "";
-  return parseAnalysis(text);
+      const text = payload.candidates?.[0]?.content?.parts?.map((part) => part.text || "").join("\n") || "";
+      return parseAnalysis(text);
+    } catch (error: unknown) {
+      lastError = error;
+      if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, attempt * 1_000));
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error("Gemini gagal memproses gambar.");
 }
 
 export async function runSnapshotAnalysis(input: SnapshotInput) {
@@ -148,4 +160,3 @@ export async function runSnapshotAnalysis(input: SnapshotInput) {
 
   return { imageUrl, analysis, snapshotId: snapshot?.id, notifications };
 }
-
