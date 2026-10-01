@@ -142,7 +142,7 @@ export async function runSnapshotAnalysis(input: SnapshotInput) {
         camera_id: input.cameraId,
         image_url: imageUrl,
         snapshot_period: input.period,
-        ai_journal: serializeAnalysis(analysis),
+        ai_journal: serializeAnalysis(analysis, input.task),
       })
       .select("id,created_at")
       .single(),

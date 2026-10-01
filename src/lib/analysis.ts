@@ -1,10 +1,12 @@
 export type AnalysisStatus = "aman" | "perhatian" | "bahaya" | "informasi";
+export type AnalysisTask = "hitung" | "progress" | "keamanan" | "umum";
 
 export type AnalysisResult = {
   title: string;
   summary: string;
   findings: string[];
   status: AnalysisStatus;
+  task?: AnalysisTask;
 };
 
 function cleanText(value: unknown) {
@@ -25,6 +27,13 @@ function normalizeStatus(value: unknown): AnalysisStatus {
   return "informasi";
 }
 
+function normalizeTask(value: unknown): AnalysisTask | undefined {
+  if (value === "hitung" || value === "progress" || value === "keamanan" || value === "umum") {
+    return value;
+  }
+  return undefined;
+}
+
 export function parseAnalysis(value: string): AnalysisResult {
   const cleaned = cleanText(value);
 
@@ -39,6 +48,7 @@ export function parseAnalysis(value: string): AnalysisResult {
       summary: cleanText(parsed.summary) || "Analisis selesai diproses.",
       findings,
       status: normalizeStatus(parsed.status),
+      task: normalizeTask(parsed.task),
     };
   } catch {
     const lines = cleaned
@@ -71,6 +81,6 @@ export function parseAnalysis(value: string): AnalysisResult {
   }
 }
 
-export function serializeAnalysis(result: AnalysisResult) {
-  return JSON.stringify(result);
+export function serializeAnalysis(result: AnalysisResult, task?: string) {
+  return JSON.stringify({ ...result, task: normalizeTask(task) || result.task });
 }

@@ -2,12 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { Trash2, Video, Camera, Clock, X, Settings2 } from "lucide-react";
+import { Video, Camera, X, Settings2 } from "lucide-react";
 import dynamic from "next/dynamic";
-import Image from "next/image";
-import { AnalysisResultView } from "@/components/AnalysisResultView";
 import { CameraScheduleEditor } from "@/components/CameraScheduleEditor";
 import { NotificationSettingsPanel } from "@/components/NotificationSettingsPanel";
+import { SnapshotJournal } from "@/components/SnapshotJournal";
 
 // Mengimpor ReactPlayer secara dinamis agar aman dijalankan di Next.js (SSR = false)
 const ReactPlayer = dynamic(() => import("react-player"), { ssr: false });
@@ -25,6 +24,7 @@ type SnapshotRecord = {
   image_url: string;
   created_at: string;
   ai_journal: string;
+  snapshot_period?: string | null;
   cameras: { name: string } | null;
 };
 
@@ -74,7 +74,6 @@ export default function CCTVPage() {
   // State untuk instruksi & jadwal dinamis
   const [tasks, setTasks] = useState<{ [key: string]: string }>({});
   const [notes, setNotes] = useState<{ [key: string]: string }>({});
-  const [filterCam, setFilterCam] = useState("all");
 
   // State untuk Pop-up Live View
   const [liveData, setLiveData] = useState({
@@ -186,8 +185,6 @@ export default function CCTVPage() {
       setLoadingLiveCameraId(null);
     }
   };
-
-  const filteredSnapshots = filterCam === "all" ? snapshots : snapshots.filter(s => s.camera_id === filterCam);
 
   return (
     <div className="relative space-y-6 sm:space-y-8">
@@ -301,74 +298,7 @@ export default function CCTVPage() {
           </div>
         </div>
 
-        {/* KOLOM KANAN: Galeri Riwayat */}
-        <div className="min-w-0">
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h3 className="font-semibold text-slate-800">Jurnal Analitik AI</h3>
-              <p className="mt-0.5 text-xs text-slate-500">Riwayat snapshot dan hasil pemeriksaan terbaru.</p>
-            </div>
-            <select 
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 outline-none focus:border-blue-500 sm:w-auto sm:max-w-xs"
-              value={filterCam} onChange={(e) => setFilterCam(e.target.value)}
-            >
-              <option value="all">Tampilkan Semua Kamera</option>
-              {cameras.map(cam => (
-                <option key={cam.id} value={cam.id}>{cam.name}</option>
-              ))}
-            </select>
-          </div>
-
-          {loading ? (
-            <div className="animate-pulse flex gap-4">
-               <div className="h-48 bg-slate-200 rounded-xl w-full"></div>
-            </div>
-          ) : (
-            <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-3">
-              {filteredSnapshots.map(snap => (
-                <article key={snap.id} className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-md">
-                  <div className="relative group">
-                    <Image
-                      src={snap.image_url}
-                      alt={`Snapshot CCTV ${snap.cameras?.name || "kamera"}`}
-                      width={640}
-                      height={360}
-                      unoptimized
-                      className="aspect-video h-auto w-full bg-slate-100 object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-start justify-end p-3">
-                      <button 
-                        onClick={() => handleDeleteSnapshot(snap.id)}
-                        className="bg-white/90 text-red-500 hover:text-red-700 p-2 rounded-lg shadow-sm backdrop-blur-sm"
-                        title="Hapus Jurnal"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </div>
-                  <div className="flex flex-1 flex-col p-4 sm:p-5">
-                    <div className="mb-3">
-                      <span className="text-xs font-bold bg-blue-50 text-blue-700 border border-blue-100 px-2.5 py-1 rounded-md">
-                        {snap.cameras?.name || "Kamera Dihapus"}
-                      </span>
-                      <div className="text-xs text-slate-400 mt-2 flex items-center gap-1">
-                        <Clock size={12}/> {new Date(snap.created_at).toLocaleString('id-ID')}
-                      </div>
-                    </div>
-                    <div className="mt-1 flex-1 border-t border-slate-100 pt-3">
-                      <AnalysisResultView value={snap.ai_journal} />
-                    </div>
-                  </div>
-                </article>
-              ))}
-              {filteredSnapshots.length === 0 && (
-                <p className="text-sm text-slate-500 col-span-full bg-white p-6 text-center rounded-xl border border-dashed border-slate-300">
-                  Belum ada riwayat snapshot untuk filter ini.
-                </p>
-              )}
-            </div>
-          )}
-        </div>
+        <SnapshotJournal cameras={cameras} snapshots={snapshots} loading={loading} onDelete={handleDeleteSnapshot} />
       </div>
 
       {/* POP-UP (MODAL) LIVE VIEW EKSKLUSIF */}
