@@ -1,9 +1,25 @@
 const worker = {
-  async fetch() {
-    return Response.json({
-      service: "smartops-snapshot-scheduler",
-      status: "ok",
-    });
+  async fetch(request, env) {
+    if (request.method === "GET") {
+      return Response.json({
+        service: "smartops-snapshot-scheduler",
+        status: "ok",
+      });
+    }
+    if (request.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
+    if (!env.CRON_SECRET || request.headers.get("authorization") !== `Bearer ${env.CRON_SECRET}`) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    try {
+      const result = await triggerScheduledSnapshots(env, Date.now());
+      return Response.json({ success: true, result });
+    } catch (error) {
+      return Response.json(
+        { error: error instanceof Error ? error.message : "Scheduler gagal dijalankan." },
+        { status: 500 },
+      );
+    }
   },
 
   async scheduled(controller, env, ctx) {
@@ -38,4 +54,5 @@ async function triggerScheduledSnapshots(env, scheduledTime) {
   }
 
   console.log(responseBody);
+  return result || responseBody;
 }
