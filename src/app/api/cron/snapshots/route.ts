@@ -1,3 +1,4 @@
+import { getOptionalRequestContext } from "@cloudflare/next-on-pages";
 import { NextResponse } from "next/server";
 import { runSnapshotAnalysis } from "@/lib/snapshot";
 import { supabase } from "@/lib/supabase";
@@ -47,16 +48,21 @@ function noStoreJson(body: unknown, status = 200) {
   });
 }
 
+function getCronSecret() {
+  const cloudflareEnv = getOptionalRequestContext()?.env as { CRON_SECRET?: string } | undefined;
+  return cloudflareEnv?.CRON_SECRET?.trim() || process.env.CRON_SECRET?.trim();
+}
+
 export async function GET() {
   return noStoreJson({
     service: "smartops-snapshot-scheduler",
-    configured: Boolean(process.env.CRON_SECRET?.trim()),
+    configured: Boolean(getCronSecret()),
     checkedAt: jakartaNow(),
   });
 }
 
 export async function POST(request: Request) {
-  const cronSecret = process.env.CRON_SECRET?.trim();
+  const cronSecret = getCronSecret();
   if (!cronSecret) {
     return noStoreJson({ error: "CRON_SECRET belum dikonfigurasi pada aplikasi." }, 503);
   }
