@@ -15,7 +15,7 @@ export default function Navbar({ onMenuClick }: { onMenuClick: () => void }) {
           <Menu size={20} />
         </button>
         <div className="min-w-0">
-          <p className="truncate text-sm font-bold text-slate-900 sm:text-base">SmartOps Workspace</p>
+          <p className="truncate text-sm font-bold text-slate-900 sm:text-base">SmartOps Workspace Prototype</p>
           <p className="hidden text-[11px] text-slate-500 sm:block">Operational intelligence dashboard</p>
         </div>
       </div>
