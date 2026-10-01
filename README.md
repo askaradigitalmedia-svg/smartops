@@ -40,6 +40,8 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 Fitur jadwal snapshot dan notifikasi membutuhkan satu migration Supabase dan beberapa secret server.
 
 1. Jalankan `supabase/migrations/20260930_cctv_schedules_notifications.sql` melalui Supabase SQL Editor.
+   Jika tabel sudah dibuat tetapi muncul error RLS, jalankan juga
+   `supabase/migrations/20261001_fix_cctv_rls_policies.sql`.
 2. Salin variable yang diperlukan dari `.env.example` ke environment lokal dan Cloudflare Pages.
 3. Untuk email, buat API key Resend dan verifikasi domain pengirim. Saat pengujian dapat memakai `onboarding@resend.dev`.
 4. Untuk Telegram, buat bot melalui `@BotFather`, masukkan `TELEGRAM_BOT_TOKEN`, lalu isi Chat ID melalui dashboard.

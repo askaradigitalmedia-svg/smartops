@@ -33,7 +33,7 @@ export async function POST() {
     } else {
       return NextResponse.json({ error: data.msg || "Gagal mendapatkan token" }, { status: 400 });
     }
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Terjadi kesalahan pada server saat menghubungi Ezviz" },
       { status: 500 }

@@ -77,10 +77,10 @@ export function NotificationSettingsPanel() {
   };
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
       <div className="mb-4 flex items-start gap-3">
         <div className="rounded-lg bg-violet-50 p-2 text-violet-600"><BellRing size={18} /></div>
-        <div>
+        <div className="min-w-0">
           <h3 className="font-semibold text-slate-800">Notifikasi Analisis</h3>
           <p className="mt-0.5 text-xs leading-5 text-slate-500">Kirim hasil AI dan gambar snapshot secara otomatis.</p>
         </div>
@@ -93,7 +93,7 @@ export function NotificationSettingsPanel() {
             <input type="checkbox" checked={settings.email_enabled} onChange={(event) => setSettings({ ...settings, email_enabled: event.target.checked })} className="h-4 w-4 accent-blue-600" />
           </label>
           {settings.email_enabled && (
-            <input type="text" value={emails} onChange={(event) => setEmails(event.target.value)} placeholder="admin@contoh.com, owner@contoh.com" className="mt-3 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-blue-500" />
+            <input type="text" value={emails} onChange={(event) => setEmails(event.target.value)} placeholder="admin@contoh.com, owner@contoh.com" className="mt-3 min-w-0 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-blue-500" />
           )}
         </div>
 
@@ -103,7 +103,7 @@ export function NotificationSettingsPanel() {
             <input type="checkbox" checked={settings.telegram_enabled} onChange={(event) => setSettings({ ...settings, telegram_enabled: event.target.checked })} className="h-4 w-4 accent-blue-600" />
           </label>
           {settings.telegram_enabled && (
-            <input type="text" value={settings.telegram_chat_id} onChange={(event) => setSettings({ ...settings, telegram_chat_id: event.target.value })} placeholder="Chat ID, contoh: -1001234567890" className="mt-3 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-blue-500" />
+            <input type="text" value={settings.telegram_chat_id} onChange={(event) => setSettings({ ...settings, telegram_chat_id: event.target.value })} placeholder="Chat ID, contoh: -1001234567890" className="mt-3 min-w-0 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-blue-500" />
           )}
         </div>
 
@@ -115,4 +115,3 @@ export function NotificationSettingsPanel() {
     </div>
   );
 }
-

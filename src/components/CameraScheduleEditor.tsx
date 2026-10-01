@@ -97,7 +97,7 @@ export function CameraScheduleEditor({ cameraId, task, note }: CameraScheduleEdi
       <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-slate-600">
         <Clock3 size={13} /> Jadwal snapshot (WIB)
       </div>
-      <div className="flex gap-2">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
         <input
           type="time"
           value={time}
@@ -117,7 +117,7 @@ export function CameraScheduleEditor({ cameraId, task, note }: CameraScheduleEdi
       {schedules.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-2">
           {schedules.map((schedule) => (
-            <span key={schedule.id} className="inline-flex items-center gap-1.5 rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700">
+            <span key={schedule.id} className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700">
               {schedule.snapshot_time.slice(0, 5)} · {taskLabel[schedule.task] || schedule.task}
               <button type="button" onClick={() => deleteSchedule(schedule.id)} className="text-blue-400 hover:text-red-600" aria-label={`Hapus jadwal ${schedule.snapshot_time.slice(0, 5)}`}>
                 <Trash2 size={11} />
@@ -130,4 +130,3 @@ export function CameraScheduleEditor({ cameraId, task, note }: CameraScheduleEdi
     </div>
   );
 }
-

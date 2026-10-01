@@ -190,47 +190,55 @@ export default function CCTVPage() {
   const filteredSnapshots = filterCam === "all" ? snapshots : snapshots.filter(s => s.camera_id === filterCam);
 
   return (
-    <div className="space-y-8 relative">
-      <div>
-        <h2 className="text-2xl font-bold text-slate-800">Dashboard CCTV & Analitik</h2>
-        <p className="text-slate-500 text-sm mt-1">Pantau Live View, kelola riwayat, dan jadwalkan analisa AI.</p>
+    <div className="relative space-y-6 sm:space-y-8">
+      <div className="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50 via-white to-indigo-50 px-5 py-5 sm:px-7 sm:py-6">
+        <span className="inline-flex rounded-full border border-blue-200 bg-white/80 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-blue-700">
+          Monitoring Center
+        </span>
+        <h2 className="mt-3 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">CCTV & Analitik AI</h2>
+        <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-500 sm:text-base">Pantau Live View, kelola riwayat, dan jadwalkan analisa AI dari satu dashboard.</p>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      <div className="grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-[minmax(20rem,23rem)_minmax(0,1fr)] xl:items-start">
         
         {/* KOLOM KIRI: Daftar Kamera Aktif */}
-        <div className="space-y-6 col-span-1">
-          <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-            <h3 className="font-semibold text-slate-700 mb-4">Tambah Kamera Baru</h3>
+        <div className="min-w-0 space-y-6">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+            <h3 className="mb-1 font-semibold text-slate-800">Tambah Kamera Baru</h3>
+            <p className="mb-4 text-xs leading-5 text-slate-500">Daftarkan kamera menggunakan serial number EZVIZ.</p>
             <form onSubmit={handleAddCamera} className="space-y-3">
-              <input type="text" required className="border p-2 rounded-lg w-full text-sm outline-none focus:border-blue-500"
+              <input type="text" required className="w-full min-w-0 rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
                 value={newCam.name} onChange={e => setNewCam({...newCam, name: e.target.value})} placeholder="Nama (Cth: Gudang)" />
-              <input type="text" required className="border p-2 rounded-lg w-full text-sm outline-none focus:border-blue-500"
+              <input type="text" required className="w-full min-w-0 rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
                 value={newCam.device_serial} onChange={e => setNewCam({...newCam, device_serial: e.target.value})} placeholder="Serial Number" />
-              <button type="submit" className="w-full bg-slate-900 text-white py-2 rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors">Simpan Kamera</button>
+              <button type="submit" className="w-full rounded-xl bg-slate-900 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800">Simpan Kamera</button>
             </form>
           </div>
 
           <NotificationSettingsPanel />
 
-          <div className="space-y-4">
-            <h3 className="font-semibold text-slate-700">Manajemen Kamera Aktif</h3>
+          <div className="min-w-0 space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="font-semibold text-slate-800">Kamera Aktif</h3>
+              <span className="rounded-full bg-slate-200 px-2.5 py-1 text-[11px] font-bold text-slate-600">{cameras.length} kamera</span>
+            </div>
             {cameras.map(cam => {
               const currentTask = tasks[cam.id] || "hitung";
               const currentNote = notes[cam.id] || "";
               const isLoadingLive = loadingLiveCameraId === cam.id;
 
               return (
-                <div key={cam.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h4 className="font-bold text-slate-800 text-lg">{cam.name}</h4>
-                      <p className="text-xs font-mono text-slate-500 bg-slate-100 px-2 py-1 rounded-md inline-block mt-1">SN: {cam.device_serial}</p>
+                <div key={cam.id} className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md sm:p-5">
+                  <div className="mb-4 flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h4 className="truncate text-base font-bold text-slate-800 sm:text-lg">{cam.name}</h4>
+                      <p className="mt-1 inline-block max-w-full truncate rounded-md bg-slate-100 px-2 py-1 font-mono text-[11px] text-slate-500">SN: {cam.device_serial}</p>
                     </div>
+                    <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-emerald-500 ring-4 ring-emerald-50" title="Kamera terdaftar" />
                   </div>
 
                   {/* Pengaturan AI */}
-                  <div className="mb-4 space-y-3 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                  <div className="mb-4 space-y-3 rounded-xl border border-slate-100 bg-slate-50 p-3 sm:p-4">
                     <div className="flex items-center gap-2 mb-2">
                       <Settings2 size={14} className="text-blue-600" />
                       <span className="text-xs font-bold text-slate-700">Instruksi AI</span>
@@ -255,18 +263,18 @@ export default function CCTVPage() {
                   </div>
 
                   {/* Tombol Aksi */}
-                  <div className="flex gap-2">
+                  <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-3">
                     <button 
                       onClick={() => handleLiveView(cam)}
                       disabled={isLoadingLive}
-                      className="flex-1 flex items-center justify-center gap-2 bg-slate-100 text-slate-700 py-2.5 rounded-lg text-sm font-semibold hover:bg-slate-200 transition-colors disabled:opacity-50"
+                      className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-slate-100 px-3 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-200 disabled:opacity-50 min-[420px]:col-span-1"
                     >
                       <Video size={16} /> {isLoadingLive ? "Loading..." : "Live"}
                     </button>
                     <button 
                       onClick={() => handleTriggerSnapshot(cam.id, cam.device_serial, currentTask, currentNote)}
                       disabled={isCapturing}
-                      className="flex-[2] flex items-center justify-center gap-2 bg-blue-600 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                      className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-50 min-[420px]:col-span-2"
                     >
                       <Camera size={16} /> {isCapturing ? "Proses..." : "Snapshot AI"}
                     </button>
@@ -294,11 +302,14 @@ export default function CCTVPage() {
         </div>
 
         {/* KOLOM KANAN: Galeri Riwayat */}
-        <div className="col-span-1 xl:col-span-2">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
-            <h3 className="font-semibold text-slate-700">Jurnal Analitik AI</h3>
+        <div className="min-w-0">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="font-semibold text-slate-800">Jurnal Analitik AI</h3>
+              <p className="mt-0.5 text-xs text-slate-500">Riwayat snapshot dan hasil pemeriksaan terbaru.</p>
+            </div>
             <select 
-              className="border p-2 rounded-lg text-sm outline-none focus:border-blue-500 bg-white text-slate-700 font-medium"
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 outline-none focus:border-blue-500 sm:w-auto sm:max-w-xs"
               value={filterCam} onChange={(e) => setFilterCam(e.target.value)}
             >
               <option value="all">Tampilkan Semua Kamera</option>
@@ -313,9 +324,9 @@ export default function CCTVPage() {
                <div className="h-48 bg-slate-200 rounded-xl w-full"></div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-3">
               {filteredSnapshots.map(snap => (
-                <div key={snap.id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col hover:shadow-md transition-shadow">
+                <article key={snap.id} className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-md">
                   <div className="relative group">
                     <Image
                       src={snap.image_url}
@@ -323,7 +334,7 @@ export default function CCTVPage() {
                       width={640}
                       height={360}
                       unoptimized
-                      className="h-52 w-full bg-slate-100 object-cover"
+                      className="aspect-video h-auto w-full bg-slate-100 object-cover"
                     />
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-start justify-end p-3">
                       <button 
@@ -335,7 +346,7 @@ export default function CCTVPage() {
                       </button>
                     </div>
                   </div>
-                  <div className="p-4 flex-1 flex flex-col">
+                  <div className="flex flex-1 flex-col p-4 sm:p-5">
                     <div className="mb-3">
                       <span className="text-xs font-bold bg-blue-50 text-blue-700 border border-blue-100 px-2.5 py-1 rounded-md">
                         {snap.cameras?.name || "Kamera Dihapus"}
@@ -348,7 +359,7 @@ export default function CCTVPage() {
                       <AnalysisResultView value={snap.ai_journal} />
                     </div>
                   </div>
-                </div>
+                </article>
               ))}
               {filteredSnapshots.length === 0 && (
                 <p className="text-sm text-slate-500 col-span-full bg-white p-6 text-center rounded-xl border border-dashed border-slate-300">
@@ -362,9 +373,9 @@ export default function CCTVPage() {
 
       {/* POP-UP (MODAL) LIVE VIEW EKSKLUSIF */}
       {liveData.isOpen && (
-        <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-black rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col border border-slate-700">
-            <div className="p-4 flex justify-between items-center bg-slate-900/50 absolute top-0 left-0 w-full z-10 bg-gradient-to-b from-black/80 to-transparent">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/90 p-2 backdrop-blur-sm sm:p-6">
+          <div className="relative flex w-full max-w-4xl flex-col overflow-hidden rounded-xl border border-slate-700 bg-black shadow-2xl sm:rounded-2xl">
+            <div className="absolute left-0 top-0 z-10 flex w-full items-center justify-between bg-gradient-to-b from-black/90 to-transparent p-3 sm:p-4">
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse"></span>
                 <h3 className="font-bold text-white tracking-wide">{liveData.camName}</h3>
@@ -375,7 +386,7 @@ export default function CCTVPage() {
             </div>
             
             {/* Player HLS */}
-            <div className="w-full aspect-video bg-black relative flex items-center justify-center">
+            <div className="relative flex aspect-video w-full items-center justify-center bg-black">
               <ReactPlayer 
                 src={liveData.url}
                 playing={true}
